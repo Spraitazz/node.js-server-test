@@ -1,0 +1,3 @@
+node staticServer.js
+
+
