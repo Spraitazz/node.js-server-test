@@ -1,0 +1,19 @@
+{
+  "name": "node.js-server-test",
+  "version": "1.0.0",
+  "description": "Multiplayer game node.js server test",
+  "main": "/Server/index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Spraitazz/node.js-server-test"
+  },
+  "author": "Jonas Paulavicius spraitazz@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Spraitazz/node.js-server-test/issues"
+  },
+  "homepage": "https://github.com/Spraitazz/node.js-server-test"
+}
