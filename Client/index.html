@@ -1,0 +1,41 @@
+﻿<!doctype html>
+<html>
+  <head>
+    <title>Sockets game</title>
+    <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+  </head>
+  
+  <body>
+  Hello from node.js!<br>
+  <input type="text" maxLength="20">
+  
+  </body>
+  
+  <script>
+  var socket = new WebSocket("ws://localhost:8080");
+ 
+  socket.onopen = function (event) {
+   $("body").append("<br> Socket opened"); 
+  socket.send("I am client");
+  
+   var input = $("body input");
+  input.keyup(function(event) {
+  if (event.which==13) {
+  socket.send(input.val());
+  input.val("");
+  }  
+  });
+  };
+  
+  socket.onmessage = function(event) {
+  var message = event.data;
+  $("body").append("<br>" + message); 
+  }
+  </script>
+
+
+
+
+
+
+</html>
