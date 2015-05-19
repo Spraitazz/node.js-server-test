@@ -1,3 +1,4 @@
+require("use-strict");
 var WebSocketServer = require("ws").Server;
 var wss = new WebSocketServer({port:8000});
 console.log("Socket server started on port 8000 \n");

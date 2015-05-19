@@ -1,3 +1,4 @@
+require("use-strict");
 var express = require("express");
 var morgan = require("morgan");
 var readline = require("readline");

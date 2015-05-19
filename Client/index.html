@@ -13,6 +13,7 @@
   </body>
   
   <script>
+  "use strict";
   var socket = new WebSocket("ws://localhost:8000");
   var username;
 
@@ -22,7 +23,7 @@
    var input =  $("#nameInput > input");
    $("#nameInput").css("display", "block");
   input.keyup(function(event) {
-  if (event.which==13) {
+  if (event.which === 13) {
   var nameInput = input.val().trim();
   if (nameInput.length > 0){
   socket.send(nameInput);
