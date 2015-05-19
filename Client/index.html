@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>Sockets game</title>
-    <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="jquery-2.1.4.min.js"></script>
     <script src="simpleStorage.js"></script>
   </head>
   
@@ -15,10 +15,12 @@
   </body>
   
   <script>
+  (function() {
+  
   "use strict";
   
   if (simpleStorage.canUse()) {
-  var socket = new WebSocket("ws://localhost:8000");  
+  var socket = new WebSocket("wss://localhost:443");  
   var username
 
   socket.onopen = function (event) {
@@ -130,6 +132,9 @@ console.log(message);
   else {
   alert("please enable local storage or change to a browser with local storage");
   }
+  
+  
+  }());
   </script>
 
 

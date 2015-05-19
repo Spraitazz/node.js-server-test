@@ -1,6 +1,36 @@
-require("use-strict");
+(function() {
+
+"use strict";
+
+var express = require("express");
+var https = require("https");
+var http = require("http");
 var WebSocketServer = require("ws").Server;
-var wss = new WebSocketServer({port:8000});
+var morgan = require("morgan");
+var fs = require("fs");
+
+var app = express();
+
+var accessLogStream = fs.createWriteStream("logs/access.log",{flags: "a"});
+app.use(express.static("Client"));
+
+app.use(morgan("combined", {stream: accessLogStream}));
+
+var httpPort = 80;
+var httpsPort = 443;
+var options = {
+key: fs.readFileSync("ssl/key.pem"),
+cert: fs.readFileSync("ssl/cert.pem")
+};
+
+var server = http.createServer(function (req, res) {
+    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
+    res.end();
+}).listen(httpPort);
+var secureServer = https.createServer(options, app).listen(httpsPort);
+console.log("Static web server started successfully on ports " + httpPort + " and " + httpsPort);
+
+var wss = new WebSocketServer({server: secureServer});
 console.log("Socket server started on port 8000 \n");
 var clientSockets = [];
 var gameRooms = [];
@@ -119,7 +149,7 @@ wss.on("connection", function connection(ws) {
   gameRooms.forEach(function(value, index) {
   roomNames.push(value.roomName);
   });
-  gameRoomList.rooms = roomNames;
+  gameRoomList.roomNames = roomNames;
   ws.send(JSON.stringify(gameRoomList));
 
 
@@ -128,4 +158,11 @@ wss.on("connection", function connection(ws) {
 
 //single websocket ends here
 });
+
+}());
+
+
+
+
+
 
