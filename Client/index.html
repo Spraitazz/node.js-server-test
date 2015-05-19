@@ -3,45 +3,63 @@
   <head>
     <title>Sockets game</title>
     <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="simpleStorage.js"></script>
   </head>
   
   <body>
-  Hello from node.js!<br>  
   <div id="nameInput" style="display:none;">Enter your name <input type="text" maxLength="20"></div>
   <br><div id="status"></div><br><br>
+  <div id="online"></div><br><br>
+  <div id="rooms">Rooms:<br></div>
   
   </body>
   
   <script>
   "use strict";
-  var socket = new WebSocket("ws://localhost:8000");
-  var username;
+  
+  if (simpleStorage.canUse()) {
+  var socket = new WebSocket("ws://localhost:8000");  
+  var username
 
   socket.onopen = function (event) {
   //socket opened  
-  //wait for name input
+  //check for name
+  var storedName = simpleStorage.get("username");
+  if (typeof storedName != "undefined"){
+  //name in storage
+  username = storedName;
+  var toSend = {};
+  toSend.type = "hasUsername";
+  toSend.username = username;
+  socket.send(JSON.stringify(toSend));
+  $("#status").append("Welcome back, " + username);
+  }
+  else{
+  //name not in storage, wait for name input
    var input =  $("#nameInput > input");
+   var toSend = {};
+   toSend.type = "setUsername";
    $("#nameInput").css("display", "block");
   input.keyup(function(event) {
   if (event.which === 13) {
   var nameInput = input.val().trim();
   if (nameInput.length > 0){
-  socket.send(nameInput);
+  toSend.username = nameInput;
+  socket.send(JSON.stringify(toSend));
   }  
   }
   });
+  }
   };
   
     
   socket.onmessage = function(event) {
   //got message
   var message = JSON.parse(event.data);
-  console.log(message);
-
+console.log(message);
   switch(message.type) {
   
     case "username":
-    //START NAME CHOOSING------------------------------------------------
       if (message.status === "nt") {
       //name taken
       $("#status").append("Sorry, this name is already taken");
@@ -51,27 +69,47 @@
       $("#nameInput").css("display", "none");
       username = message.username;
       $("#status").append("Welcome, " + username);
+      simpleStorage.set("username", username);
+      simpleStorage.setTTL("username", 60*5*1000);
       }
     break;
-    //END NAME CHOOSING----------------------------------------------------
     
     case "online":
-      $("body").append("Currently online: <br>");
+      var onlineDiv = $("#online");
+      onlineDiv.html("Currently online: <br>");
       $.each(message.body, function(index, value) {
-      $("body").append(value + "<br>");      
+      $("<div/>", {
+      "class": "onlineUser",
+      html: value      
+      }).appendTo(onlineDiv);      
       });
       break;
       
     case "connected":
-    
-   
+    var onlineDiv = $("#online");
+   $("<div/>", {
+      "class": "onlineUser",
+      html: message.username     
+      }).appendTo(onlineDiv); 
       break;
       
     case "disconnected":
-    
-    
-    
+      var onlineList = $("#online div");
+      onlineList.each(function(index) {
+      if ($(this).html() === message.username) {
+      $(this).remove();
+      return false;
+      }
+      });   
       break;
+      
+    case "gamerooms":
+      var roomNames = message.roomNames;
+      for (var i = 0; i < roomNames.length; i++) {
+      
+      }
+    
+    break;
     
   
   
@@ -87,6 +125,11 @@
   socket.onclose = function(event) {
   
   };
+  
+  }
+  else {
+  alert("please enable local storage or change to a browser with local storage");
+  }
   </script>
 
 
