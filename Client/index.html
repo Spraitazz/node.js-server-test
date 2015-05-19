@@ -14,11 +14,10 @@
   
   <script>
   var socket = new WebSocket("ws://localhost:8000");
- 
-  socket.onopen = function (event) {
-  //socket opened
   var username;
-  
+
+  socket.onopen = function (event) {
+  //socket opened  
   //wait for name input
    var input =  $("#nameInput > input");
    $("#nameInput").css("display", "block");
@@ -34,7 +33,6 @@
   
     
   socket.onmessage = function(event) {
-  console.log("message arrived");
   //got message
   var message = JSON.parse(event.data);
   console.log(message);
@@ -58,18 +56,36 @@
     
     case "online":
       $("body").append("Currently online: <br>");
-      $.each(message.body, function(value, index) {
-      $("body").append(value + "<br");
-      
+      $.each(message.body, function(index, value) {
+      $("body").append(value + "<br>");      
       });
+      break;
+      
+    case "connected":
+    
+   
+      break;
+      
+    case "disconnected":
+    
+    
+    
+      break;
     
   
   
   }
+  };
   
-
-
-  }
+  
+  socket.onerror = function(event) {
+  
+  
+  };
+  
+  socket.onclose = function(event) {
+  
+  };
   </script>
 
 
