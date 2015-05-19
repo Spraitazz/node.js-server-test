@@ -1,0 +1,2 @@
+127.0.0.1 - - [19/May/2015:11:32:08 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
+127.0.0.1 - - [19/May/2015:11:32:09 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"

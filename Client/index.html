@@ -6,30 +6,69 @@
   </head>
   
   <body>
-  Hello from node.js!<br>
-  <input type="text" maxLength="20">
+  Hello from node.js!<br>  
+  <div id="nameInput" style="display:none;">Enter your name <input type="text" maxLength="20"></div>
+  <br><div id="status"></div><br><br>
   
   </body>
   
   <script>
-  var socket = new WebSocket("ws://localhost:8080");
+  var socket = new WebSocket("ws://localhost:8000");
  
   socket.onopen = function (event) {
-   $("body").append("<br> Socket opened"); 
-  socket.send("I am client");
+  //socket opened
+  var username;
   
-   var input = $("body input");
+  //wait for name input
+   var input =  $("#nameInput > input");
+   $("#nameInput").css("display", "block");
   input.keyup(function(event) {
   if (event.which==13) {
-  socket.send(input.val());
-  input.val("");
+  var nameInput = input.val().trim();
+  if (nameInput.length > 0){
+  socket.send(nameInput);
   }  
+  }
   });
   };
   
+    
   socket.onmessage = function(event) {
-  var message = event.data;
-  $("body").append("<br>" + message); 
+  console.log("message arrived");
+  //got message
+  var message = JSON.parse(event.data);
+  console.log(message);
+
+  switch(message.type) {
+  
+    case "username":
+    //START NAME CHOOSING------------------------------------------------
+      if (message.status === "nt") {
+      //name taken
+      $("#status").append("Sorry, this name is already taken");
+      }
+      else if (message.status === "nc") {
+      //name chosen successfully
+      $("#nameInput").css("display", "none");
+      username = message.username;
+      $("#status").append("Welcome, " + username);
+      }
+    break;
+    //END NAME CHOOSING----------------------------------------------------
+    
+    case "online":
+      $("body").append("Currently online: <br>");
+      $.each(message.body, function(value, index) {
+      $("body").append(value + "<br");
+      
+      });
+    
+  
+  
+  }
+  
+
+
   }
   </script>
 
