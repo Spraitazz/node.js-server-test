@@ -7,34 +7,78 @@
   </head>
   
   <body>
-  <div id="nameInput" style="display:none;">Enter your name <input type="text" maxLength="20"></div>
-  <br><div id="status"></div><br><br>
-  <div id="online"></div><br><br>
-  <div id="rooms">Rooms:<br></div>
-  
+    <div id="nameInput" style="display:none;">Enter your name <input type="text" maxLength="20"></div>
+    <br><div id="status"></div><br><br>
+    <div id="online"></div><br><br>
+    <div id="rooms" style="display: none;">
+    <button id="addRoom" style="display:block;">Create new game room</button>
+    <div id="roomOptions" style="display:none;">
+    Room name: <input type="text" maxLength="20" id="rName">
+    Password (optional): <input type="text" maxLength="20" id="rPass">
+    Game type: <select>
+    <option value="2v2 hangman">2v2 hangman</option>
+    <option value="draw">draw</option>
+    </select> 
+    <button>Create room</button>
+    </div>
+    <br>
+    <div id="roomList" style="display:none;">Rooms:<br></div>
+    </div>
+    <div id="myRoom" style="display:none;">
+    <div id="myRoomTitle"><br><br>
+    
+    </div>
+    </div>
   </body>
   
   <script>
   (function() {
   
   "use strict";
-  
+  //can use local storage
   if (simpleStorage.canUse()) {
+  
   var socket = new WebSocket("wss://localhost:443");  
-  var username
+  var username;
+  var roomDiv = $("#rooms");
+  var roomList = $("#roomList");
+  
+  $("#addRoom").click(function() {
+  $("#roomOptions").css("display", "block");
+  $("#roomOptions button").click(function() {
+  var roomName = $("#rName").val();
+  var roomPass = $("#rPass").val();
+  var roomType = $("#roomOptions select").val();
+  if (roomName.length < 3) {
+  alert("room name must be at least 3 characters");
+  }
+  else {
+  var roomMessage = {};
+  roomMessage.type = "createRoom";
+  roomMessage.roomName = roomName;
+  roomMessage.roomPass = roomPass;
+  roomMessage.roomOwner = username;
+  roomMessage.roomType = roomType;
+  socket.send(JSON.stringify(roomMessage));
+  $("#addRoom, #roomOptions").css("display", "none");
+  }
+  });
+  });
 
   socket.onopen = function (event) {
   //socket opened  
   //check for name
   var storedName = simpleStorage.get("username");
   if (typeof storedName != "undefined"){
-  //name in storage
+  //name in storage, IDENTIFIED
   username = storedName;
   var toSend = {};
   toSend.type = "hasUsername";
   toSend.username = username;
   socket.send(JSON.stringify(toSend));
   $("#status").append("Welcome back, " + username);
+  roomDiv.css("display", "block");
+  roomList.css("display", "block");
   }
   else{
   //name not in storage, wait for name input
@@ -67,12 +111,14 @@ console.log(message);
       $("#status").append("Sorry, this name is already taken");
       }
       else if (message.status === "nc") {
-      //name chosen successfully
+      //name chosen successfully, IDENTIFIED
       $("#nameInput").css("display", "none");
       username = message.username;
       $("#status").append("Welcome, " + username);
       simpleStorage.set("username", username);
       simpleStorage.setTTL("username", 60*5*1000);
+      roomDiv.css("display", "block");
+      roomList.css("display", "block");
       }
     break;
     
@@ -105,11 +151,37 @@ console.log(message);
       });   
       break;
       
+    case "myRoom":
+    if (message.roomName.length>0) {
+    //i am in a room
+    }
+    
+      
     case "gamerooms":
+    //display rooms
       var roomNames = message.roomNames;
       for (var i = 0; i < roomNames.length; i++) {
-      
+      $("<div/>", {
+    "class": "roomDiv",
+    html: message.roomNames[i]    
+    }).appendTo("#roomList");
       }
+    
+    break;
+    
+    case "newRoom": 
+    //check if im in this room
+    if (message.roomInfo.roomOwner === username) {
+    
+    //I'm the owner
+    roomDiv.css("display", "none");
+    } else {
+    else 
+    $("<div/>", {
+    "class": "roomDiv",
+    html: message.roomInfo.roomName    
+    }).appendTo("#roomList");
+    }
     
     break;
     

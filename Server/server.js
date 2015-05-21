@@ -1,5 +1,6 @@
 (function() {
 
+//strict mode 
 "use strict";
 
 var express = require("express");
@@ -8,14 +9,15 @@ var http = require("http");
 var WebSocketServer = require("ws").Server;
 var morgan = require("morgan");
 var fs = require("fs");
-
+var ClientSocket = require("./ClientSocket.js");
+var GameRoom = require("./GameRoom.js");
+//use express.js
 var app = express();
-
+//access logging using morgan
 var accessLogStream = fs.createWriteStream("logs/access.log",{flags: "a"});
 app.use(express.static("Client"));
-
 app.use(morgan("combined", {stream: accessLogStream}));
-
+//set server options
 var httpPort = 80;
 var httpsPort = 443;
 var options = {
@@ -23,36 +25,28 @@ key: fs.readFileSync("ssl/key.pem"),
 cert: fs.readFileSync("ssl/cert.pem")
 };
 
+//start http, https and wss servers
+
 var server = http.createServer(function (req, res) {
     res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
     res.end();
 }).listen(httpPort);
+
 var secureServer = https.createServer(options, app).listen(httpsPort);
 console.log("Static web server started successfully on ports " + httpPort + " and " + httpsPort);
 
 var wss = new WebSocketServer({server: secureServer});
 console.log("Socket server started on port 8000 \n");
+
+//BEGIN FUNCTIONALITY ---------------------------------------------------------------------
+
 var clientSockets = [];
 var gameRooms = [];
-
-//client socket class containing the underlying socket + properties
-function ClientSocket (socket) {
-this.socket = socket;
-this.username = "";
-};
-
-//room class for game rooms
-function GameRoom (roomName, roomOwner) {
-this.roomName = roomName;
-this.roomOwner = roomOwner;
-this.players = [];
-}
-
-function broadcast (msg) {
-wss.clients.forEach(function (client) {
- client.send(msg);    
-  });
-}
+//get all functions from outside file
+var functions = require("./functions.js").getFunctions(wss, clientSockets, gameRooms);
+var broadcast = functions.broadcast;
+var broadcastNewClient = functions.broadcastNewClient;
+var dataOnJoin = functions.dataOnJoin;
 
 //socket connecting
 wss.on("connection", function connection(ws) {
@@ -60,11 +54,12 @@ wss.on("connection", function connection(ws) {
   var thisSocket = new ClientSocket(ws);
 
   ws.on("open", function open() {
-  //socket doesnt exist until it has a name
+  //socket doesnt exist (for players) until it has a name
   });
 
   ws.on("close", function close() {
-  //remove websocket from sockets
+  //remove websocket from sockets, but wait 5 seconds to avoid refresh disconnects
+
   for (var i = 0; i < clientSockets.length; i++) {
   if (clientSockets[i].socket === ws) {
   clientSockets.splice(i, 1);
@@ -85,12 +80,13 @@ wss.on("connection", function connection(ws) {
   ws.on("message", function incoming(message) {
 
   var response = {};
-  var msg = JSON.parse(message);
+  var msg = JSON.parse(message.replace(/[\/\\<>=]/g, ""));
+  
+  //check type of message, create appropriate response
   switch (msg.type) {
 
   case "setUsername":
   //username not yet set
-
   response.type = "username";
   var nameTaken = false;
   clientSockets.every(function(currentValue, index) {
@@ -111,48 +107,50 @@ wss.on("connection", function connection(ws) {
   thisSocket.username = msg.username;
   clientSockets.push(thisSocket);
   response.status = "nc";
-  response.username = msg.username;
+  response.username = msg.username;  
   ws.send(JSON.stringify(response));
+  //inform others of new player, send all data to this client
+  broadcastNewClient(msg);
+  dataOnJoin(thisSocket.socket);
+  var myRoom = {};
+  myRoom.type = "myRoom";
+  myRoom.roomName = thisSocket.inRoom;
+  ws.send(myRoom);
   }
   break;
 
   case "hasUsername":
   thisSocket.username = msg.username;
   clientSockets.push(thisSocket);
+  //inform others of new player, send all data to this client
+  broadcastNewClient(msg);
+  dataOnJoin(thisSocket.socket);
+  myRoom.type = "myRoom";
+  myRoom.roomName = thisSocket.inRoom;
+  ws.send(myRoom);
+  break;
+  
+  case "createRoom":
+  //new room added
+  var newRoom = new GameRoom(msg.roomName, msg.roomOwner, msg.roomType, msg.roomPass);
+  gameRooms.push(newRoom); 
+  var roomMessage = {};
+  roomMessage.type = "newRoom";
+  roomMessage.roomInfo = newRoom;
+  clientSockets.every(function(value, index) {
+  if (clientSockets.username == thisSocket.username){
+  clientSockets.inRoom = msg.roomName;
+  return true;
+  }
+  else {
+  return false;
+  }
+  });
+  //inform all players of new room  
+  broadcast(JSON.stringify(roomMessage));  
   break;
 
 }
-  //broadcast new connection to others
-  var newConnection = {};
-  newConnection.type = "connected";
-  newConnection.username = msg.username;
-  clientSockets.forEach(function(value, index) {
-  if (value.username !== msg.username) {
-  value.socket.send(JSON.stringify(newConnection));
-  }
-  });
-
-  //send online list to new user
-  var online = {};
-  online.type = "online";
-  var onlineList = [];
-  clientSockets.forEach(function(value, index) {
-  onlineList.push(value.username);
-  });
-  online.body = onlineList;
-  ws.send(JSON.stringify(online));
-
-  //send game room list to new user 
-  var gameRoomList = {};
-  gameRoomList.type = "gamerooms";
-  var roomNames = [];
-  gameRooms.forEach(function(value, index) {
-  roomNames.push(value.roomName);
-  });
-  gameRoomList.roomNames = roomNames;
-  ws.send(JSON.stringify(gameRoomList));
-
-
 
   });
 
