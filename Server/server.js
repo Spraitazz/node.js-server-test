@@ -1,5 +1,4 @@
 (function() {
-
 //strict mode 
 "use strict";
 
@@ -21,8 +20,8 @@ app.use(morgan("combined", {stream: accessLogStream}));
 var httpPort = 80;
 var httpsPort = 443;
 var options = {
-key: fs.readFileSync("ssl/key.pem"),
-cert: fs.readFileSync("ssl/cert.pem")
+    key: fs.readFileSync("ssl/key.pem"),
+    cert: fs.readFileSync("ssl/cert.pem")
 };
 
 //start http, https and wss servers
@@ -50,111 +49,139 @@ var dataOnJoin = functions.dataOnJoin;
 
 //socket connecting
 wss.on("connection", function connection(ws) {
-//a single websocket starts here
-  var thisSocket = new ClientSocket(ws);
 
-  ws.on("open", function open() {
-  //socket doesnt exist (for players) until it has a name
-  });
+    //a single websocket starts here
+    var thisSocket = new ClientSocket(ws);
 
-  ws.on("close", function close() {
-  //remove websocket from sockets, but wait 5 seconds to avoid refresh disconnects
+    ws.on("open", function open() {
+        //socket doesnt exist (for other players) until it has a name
+    });
 
-  for (var i = 0; i < clientSockets.length; i++) {
-  if (clientSockets[i].socket === ws) {
-  clientSockets.splice(i, 1);
-  break;
-  }
-  }
-  //only inform if disconnected user had username
-  if (typeof thisSocket.username != "undefined") {
-  var message = {};
-  message.type = "disconnected";
-  message.username = thisSocket.username;
-  broadcast(JSON.stringify(message));
-  }
-  });
+    ws.on("close", function close() {
+        //remove websocket from sockets
+        for (var i = 0; i < clientSockets.length; i++) {
+            if (clientSockets[i].socket === ws) {
+                clientSockets.splice(i, 1);
+                break;
+            }
+        }
+        //only inform if disconnected user had username
+        if (thisSocket.username.length > 0) {
+            var message = {};
+            message.type = "disconnected";
+            message.username = thisSocket.username;
+            broadcast(JSON.stringify(message));
+        }
+    });
 
 
-  //message received
-  ws.on("message", function incoming(message) {
+    //message received
+    ws.on("message", function incoming(message) {
 
-  var response = {};
-  var msg = JSON.parse(message.replace(/[\/\\<>=]/g, ""));
-  
-  //check type of message, create appropriate response
-  switch (msg.type) {
+        var msg = JSON.parse(message.replace(/[\/\\<>=]/g, ""));
 
-  case "setUsername":
-  //username not yet set
-  response.type = "username";
-  var nameTaken = false;
-  clientSockets.every(function(currentValue, index) {
-  //loop through sockets to check if name exists
-  if (currentValue.username === msg.username) {
-  //name exists, inform client
-  nameTaken = true;
-  response.status = "nt";
-  ws.send(JSON.stringify(response));
-  return false;
-  }
-  else {
-  return true;
-  }
-  });
-  if (nameTaken === false) {
-  //name doesn't exist, set name as message and SEND
-  thisSocket.username = msg.username;
-  clientSockets.push(thisSocket);
-  response.status = "nc";
-  response.username = msg.username;  
-  ws.send(JSON.stringify(response));
-  //inform others of new player, send all data to this client
-  broadcastNewClient(msg);
-  dataOnJoin(thisSocket.socket);
-  var myRoom = {};
-  myRoom.type = "myRoom";
-  myRoom.roomName = thisSocket.inRoom;
-  ws.send(myRoom);
-  }
-  break;
+        //check type of message, create appropriate response
+        switch (msg.type) {
 
-  case "hasUsername":
-  thisSocket.username = msg.username;
-  clientSockets.push(thisSocket);
-  //inform others of new player, send all data to this client
-  broadcastNewClient(msg);
-  dataOnJoin(thisSocket.socket);
-  myRoom.type = "myRoom";
-  myRoom.roomName = thisSocket.inRoom;
-  ws.send(myRoom);
-  break;
-  
-  case "createRoom":
-  //new room added
-  var newRoom = new GameRoom(msg.roomName, msg.roomOwner, msg.roomType, msg.roomPass);
-  gameRooms.push(newRoom); 
-  var roomMessage = {};
-  roomMessage.type = "newRoom";
-  roomMessage.roomInfo = newRoom;
-  clientSockets.every(function(value, index) {
-  if (clientSockets.username == thisSocket.username){
-  clientSockets.inRoom = msg.roomName;
-  return true;
-  }
-  else {
-  return false;
-  }
-  });
-  //inform all players of new room  
-  broadcast(JSON.stringify(roomMessage));  
-  break;
+        case "setUsername":
+            var response = {};
+            //username not yet set
+            response.type = "username";
+            var nameTaken = false;
+            clientSockets.every(function(currentValue, index) {
+                //loop through sockets to check if name exists
+                if (currentValue.username === msg.username) {
+                    //name exists, inform client
+                    nameTaken = true;
+                    response.status = "nt";
+                    ws.send(JSON.stringify(response));
+                    return false;
+                } else {
+                    return true;
+                }
+            });
+            if (nameTaken === false) {
+                //name doesn't exist, set name as message and SEND
+                thisSocket.username = msg.username;
+                clientSockets.push(thisSocket);
+                response.status = "nc";
+                response.username = msg.username;  
+                ws.send(JSON.stringify(response));
+                //inform others of new player, send all data to this client
+                broadcastNewClient(msg);
+                dataOnJoin(thisSocket.socket);  
+            }
+        break;
+        
+        
 
-}
+        case "hasUsername":
+            thisSocket.username = msg.username;
+            clientSockets.push(thisSocket);
+            //inform others of new player, send all data to this client
+            broadcastNewClient(msg);
+            dataOnJoin(thisSocket.socket);
+            myRoom.type = "myRoom";
+            myRoom.roomName = thisSocket.inRoom;
+            ws.send(myRoom);
+        break;
+        
+        
+        
 
-  });
+        case "createRoom":
+            //creating new room, check if name exists
+            var nameTaken = false;
+            var roomMessage = {};
+            roomMessage.type = "roomCreate";
+            gameRooms.every(function(currentValue, index) {
+                //loop through rooms to check if name exists
+                if (currentValue.roomName === msg.roomName) {
+                    //room name exists, inform client
+                    nameTaken = true;
+                    roomMessage.status = "rnt";
+                    ws.send(JSON.stringify(roomMessage));
+                    return false;
+                } else {
+                    return true;
+                }
+            });
+            if (nameTaken === false){
+                //room with such a name doesn't exist, add room to array
+                var newRoom = new GameRoom(msg.roomName, msg.roomOwner, msg.roomType, msg.roomPass);
+                gameRooms.push(newRoom); 
+                //inform player of the room being successfully created
+                roomMessage.roomInfo = newRoom;
+                ws.send(JSON.stringify(roomMessage));
+                //set this player's info to being in the room
+                clientSockets.every(function(value, index) {
+                    if (clientSockets.username == thisSocket.username){
+                        clientSockets.inRoom = msg.roomName;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                });
+                //inform all players of new room, don't send password
+                var newRoomMessage = {};
+                newRoomMessage.type = "newRoom";
+                newRoomMessage.roomName = newRoom.roomName;
+                newRoomMessage.roomType = newRoom.roomType;
+                newRoomMessage.hasPass = newRoom.hasPass;
+                broadcast(JSON.stringify(newRoomMessage));                
+            }
+            
+        break;
 
-//single websocket ends here
+        case "joinRoom":
+        //attempting to join a room
+
+
+        }
+
+    });
+
+    //single websocket ends here
 });
 
 }());

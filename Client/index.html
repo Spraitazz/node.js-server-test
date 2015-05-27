@@ -51,8 +51,8 @@
   var roomType = $("#roomOptions select").val();
   if (roomName.length < 3) {
   alert("room name must be at least 3 characters");
-  }
-  else {
+  } else {
+  //everything ok, send message to attempt room creation
   var roomMessage = {};
   roomMessage.type = "createRoom";
   roomMessage.roomName = roomName;
@@ -149,41 +149,56 @@ console.log(message);
       return false;
       }
       });   
-      break;
-      
-    case "myRoom":
-    if (message.roomName.length>0) {
-    //i am in a room
-    }
-    
+      break;    
       
     case "gamerooms":
     //display rooms
-      var roomNames = message.roomNames;
-      for (var i = 0; i < roomNames.length; i++) {
+      var rooms = message.rooms;
+      for (var i = 0; i < rooms.length; i++) {
+      var roomSize;
+      var playerNo = rooms[i].players.length;
+      var passRequired = "no";
+      if (rooms[i].hasPass) {
+      passRequired = "yes";
+      }
+      if (roomType==="draw") {
+      roomSize = 2;
+      } else {
+      roomSize = 4;
+      }  
+      
       $("<div/>", {
     "class": "roomDiv",
-    html: message.roomNames[i]    
+    "data-room-name": rooms[i].roomName,
+    html: "name: "+rooms[i].roomName + " | type: " + rooms[i].roomType + " | players: " + playerNo+"/"+roomSize + " | password protected: " + passRequired + " |join: <button " 
     }).appendTo("#roomList");
+    
+    $(".roomDiv button").click(function() {
+    var thisRoomName = $(this).parent().attr("data-room-name");
+    //ask for password if necessary, if not - join room
+    });
+    
       }
     
     break;
     
-    case "newRoom": 
-    //check if im in this room
-    if (message.roomInfo.roomOwner === username) {
-    
-    //I'm the owner
-    roomDiv.css("display", "none");
-    } else {
-    else 
-    $("<div/>", {
-    "class": "roomDiv",
-    html: message.roomInfo.roomName    
-    }).appendTo("#roomList");
-    }
-    
-    break;
+   case "roomCreate":
+   if (message.status==="rnt") {
+   //room name taken
+   
+   
+   } else {
+   
+   
+   
+   }   
+   break;
+   
+   case "newRoom":
+   //new room created
+   
+   
+   break;
     
   
   
