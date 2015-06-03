@@ -7,3 +7,8 @@
 127.0.0.1 - - [20/May/2015:20:54:24 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
 127.0.0.1 - - [21/May/2015:11:49:39 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
 127.0.0.1 - - [21/May/2015:11:49:39 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
+127.0.0.1 - - [30/May/2015:17:50:00 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
+127.0.0.1 - - [30/May/2015:17:50:00 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
+127.0.0.1 - - [03/Jun/2015:19:14:46 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
+127.0.0.1 - - [03/Jun/2015:19:14:46 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0"
+127.0.0.1 - - [03/Jun/2015:19:59:18 +0000] "GET /favicon.ico HTTP/1.1" 404 24 "https://localhost/" "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.81 Safari/537.36"

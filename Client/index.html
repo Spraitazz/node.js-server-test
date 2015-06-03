@@ -25,203 +25,277 @@
     <div id="roomList" style="display:none;">Rooms:<br></div>
     </div>
     <div id="myRoom" style="display:none;">
-    <div id="myRoomTitle"><br><br>
-    
+    <div id="myRoomTitle"><br><br>    
+    <div id="myRoomPlayers"></div>
     </div>
     </div>
   </body>
   
   <script>
-  (function() {
-  
-  "use strict";
-  //can use local storage
-  if (simpleStorage.canUse()) {
-  
-  var socket = new WebSocket("wss://localhost:443");  
-  var username;
-  var roomDiv = $("#rooms");
-  var roomList = $("#roomList");
-  
-  $("#addRoom").click(function() {
-  $("#roomOptions").css("display", "block");
-  $("#roomOptions button").click(function() {
-  var roomName = $("#rName").val();
-  var roomPass = $("#rPass").val();
-  var roomType = $("#roomOptions select").val();
-  if (roomName.length < 3) {
-  alert("room name must be at least 3 characters");
-  } else {
-  //everything ok, send message to attempt room creation
-  var roomMessage = {};
-  roomMessage.type = "createRoom";
-  roomMessage.roomName = roomName;
-  roomMessage.roomPass = roomPass;
-  roomMessage.roomOwner = username;
-  roomMessage.roomType = roomType;
-  socket.send(JSON.stringify(roomMessage));
-  $("#addRoom, #roomOptions").css("display", "none");
-  }
-  });
-  });
+    (function() {
+    
+        "use strict";
+        
+        function listOneRoom(room, socket, username) {
+            var roomSize;
+            var playerNo = room.players.length;
+            var passRequired = "no";
+            if (room.hasPass) {
+            passRequired = "yes";
+            }
+            if (room.roomType==="draw") {
+            roomSize = 2;
+            } else {
+            roomSize = 4;
+            }  
+            
+            $("<div/>", {
+                "class": "roomDiv",
+                "data-room-name": room.roomName,
+                "data-room-passRequired": passRequired,
+                 html: "name: "+room.roomName + " | type: " + room.roomType + " | players: " + playerNo+"/"+roomSize + " | password protected: " + passRequired + " |<button>Join</button>" 
+            }).appendTo("#roomList");
+          
+            $(".roomDiv button").click(function() {
+                var thisRoomName = $(this).parent().attr("data-room-name");
+                //ask for password if necessary, if not - join room
+                var joinRoomMessage = {};
+                joinRoomMessage.type = "joinRoom";
+                joinRoomMessage.roomName = thisRoomName;
+                joinRoomMessage.username = username;
+                if ($(this).parent().attr("data-room-passRequired")==="yes") {
+                    var pass = prompt("Please enter the room password","");
+                    if (pass!=null) {
+                        joinRoomMessage.passwordAttempt = pass;
+                        socket.send(JSON.stringify(joinRoomMessage));
+                    }
+                } else {
+                    joinRoomMessage.passwordAttempt = "";
+                    socket.send(JSON.stringify(joinRoomMessage));
+                }
+                
+                
+            });  
+        }
+        
+        //can use local storage
+        if (simpleStorage.canUse()) {	  
+            
+            var socket = new WebSocket("wss://localhost:443");  
+            var username;
+            var roomDiv = $("#rooms");
+            var roomList = $("#roomList");
+            
+            $("#addRoom").click(function() {
+                $("#roomOptions").css("display", "block");
+                $("#roomOptions button").click(function() {
+                    var roomName = $("#rName").val();
+                    var roomPass = $("#rPass").val();
+                    var roomType = $("#roomOptions select").val();
+                    if (roomName.length < 3) {
+                        alert("room name must be at least 3 characters");
+                    } else {
+                    //everything ok, send message to attempt room creation
+                        var roomMessage = {};
+                        roomMessage.type = "createRoom";
+                        roomMessage.roomName = roomName;
+                        roomMessage.roomPass = roomPass;
+                        roomMessage.roomOwner = username;
+                        roomMessage.roomType = roomType;
+                        socket.send(JSON.stringify(roomMessage));
+                        $("#addRoom, #roomOptions").css("display", "none");
+                    }
+                });
+            });
 
-  socket.onopen = function (event) {
-  //socket opened  
-  //check for name
-  var storedName = simpleStorage.get("username");
-  if (typeof storedName != "undefined"){
-  //name in storage, IDENTIFIED
-  username = storedName;
-  var toSend = {};
-  toSend.type = "hasUsername";
-  toSend.username = username;
-  socket.send(JSON.stringify(toSend));
-  $("#status").append("Welcome back, " + username);
-  roomDiv.css("display", "block");
-  roomList.css("display", "block");
-  }
-  else{
-  //name not in storage, wait for name input
-   var input =  $("#nameInput > input");
-   var toSend = {};
-   toSend.type = "setUsername";
-   $("#nameInput").css("display", "block");
-  input.keyup(function(event) {
-  if (event.which === 13) {
-  var nameInput = input.val().trim();
-  if (nameInput.length > 0){
-  toSend.username = nameInput;
-  socket.send(JSON.stringify(toSend));
-  }  
-  }
-  });
-  }
-  };
-  
-    
-  socket.onmessage = function(event) {
-  //got message
-  var message = JSON.parse(event.data);
-console.log(message);
-  switch(message.type) {
-  
-    case "username":
-      if (message.status === "nt") {
-      //name taken
-      $("#status").append("Sorry, this name is already taken");
-      }
-      else if (message.status === "nc") {
-      //name chosen successfully, IDENTIFIED
-      $("#nameInput").css("display", "none");
-      username = message.username;
-      $("#status").append("Welcome, " + username);
-      simpleStorage.set("username", username);
-      simpleStorage.setTTL("username", 60*5*1000);
-      roomDiv.css("display", "block");
-      roomList.css("display", "block");
-      }
-    break;
-    
-    case "online":
-      var onlineDiv = $("#online");
-      onlineDiv.html("Currently online: <br>");
-      $.each(message.body, function(index, value) {
-      $("<div/>", {
-      "class": "onlineUser",
-      html: value      
-      }).appendTo(onlineDiv);      
-      });
-      break;
-      
-    case "connected":
-    var onlineDiv = $("#online");
-   $("<div/>", {
-      "class": "onlineUser",
-      html: message.username     
-      }).appendTo(onlineDiv); 
-      break;
-      
-    case "disconnected":
-      var onlineList = $("#online div");
-      onlineList.each(function(index) {
-      if ($(this).html() === message.username) {
-      $(this).remove();
-      return false;
-      }
-      });   
-      break;    
-      
-    case "gamerooms":
-    //display rooms
-      var rooms = message.rooms;
-      for (var i = 0; i < rooms.length; i++) {
-      var roomSize;
-      var playerNo = rooms[i].players.length;
-      var passRequired = "no";
-      if (rooms[i].hasPass) {
-      passRequired = "yes";
-      }
-      if (roomType==="draw") {
-      roomSize = 2;
-      } else {
-      roomSize = 4;
-      }  
-      
-      $("<div/>", {
-    "class": "roomDiv",
-    "data-room-name": rooms[i].roomName,
-    html: "name: "+rooms[i].roomName + " | type: " + rooms[i].roomType + " | players: " + playerNo+"/"+roomSize + " | password protected: " + passRequired + " |join: <button " 
-    }).appendTo("#roomList");
-    
-    $(".roomDiv button").click(function() {
-    var thisRoomName = $(this).parent().attr("data-room-name");
-    //ask for password if necessary, if not - join room
-    });
-    
-      }
-    
-    break;
-    
-   case "roomCreate":
-   if (message.status==="rnt") {
-   //room name taken
-   
-   
-   } else {
-   
-   
-   
-   }   
-   break;
-   
-   case "newRoom":
-   //new room created
-   
-   
-   break;
-    
-  
-  
-  }
-  };
-  
-  
-  socket.onerror = function(event) {
-  
-  
-  };
-  
-  socket.onclose = function(event) {
-  
-  };
-  
-  }
-  else {
-  alert("please enable local storage or change to a browser with local storage");
-  }
-  
-  
-  }());
+            socket.onopen = function (event) {
+            //socket opened  
+            //check for name
+                var storedName = simpleStorage.get("username");
+                if (typeof storedName != "undefined"){
+                //name in storage, IDENTIFIED
+                    username = storedName;
+                    var toSend = {};
+                    toSend.type = "hasUsername";
+                    toSend.username = username;
+                    socket.send(JSON.stringify(toSend));
+                    $("#status").append("Welcome back, " + username);
+                    roomDiv.css("display", "block");
+                    roomList.css("display", "block");
+                } else {
+                //name not in storage, wait for name input
+                    var input =  $("#nameInput > input");
+                    var toSend = {};
+                    toSend.type = "setUsername";
+                    $("#nameInput").css("display", "block");
+                    input.keyup(function(event) {
+                        if (event.which === 13) {
+                            var nameInput = input.val().trim();
+                            if (nameInput.length > 0){
+                                toSend.username = nameInput;
+                                socket.send(JSON.stringify(toSend));
+                            }  
+                        }
+                    });
+                }
+            };
+            
+            
+              
+            socket.onmessage = function(event) {
+            //got message
+                var message = JSON.parse(event.data);
+                console.log(message);
+                switch(message.type) {
+                
+                    case "username":
+                        if (message.status === "nt") {
+                        //name taken
+                            $("#status").append("Sorry, this name is already taken");
+                        } else {
+                        //name chosen successfully, IDENTIFIED
+                            $("#nameInput").css("display", "none");
+                            username = message.username;
+                            $("#status").append("Welcome, " + username);
+                            simpleStorage.set("username", username);
+                            simpleStorage.setTTL("username", 60*5*1000);
+                            roomDiv.css("display", "block");
+                            roomList.css("display", "block");
+                        }
+                    break;
+                  
+                    case "online":
+                        var onlineDiv = $("#online");
+                        onlineDiv.html("Currently online: <br>");
+                        $.each(message.body, function(index, value) {
+                            $("<div/>", {
+                            "class": "onlineUser",
+                            html: value      
+                            }).appendTo(onlineDiv);      
+                        });
+                    break;
+                    
+                    case "connected":
+                        var onlineDiv = $("#online");
+                        $("<div/>", {
+                        "class": "onlineUser",
+                        html: message.username     
+                        }).appendTo(onlineDiv); 
+                    break;
+                    
+                    case "disconnected":
+                        var onlineList = $("#online div");
+                        onlineList.each(function(index) {
+                            if ($(this).html() === message.username) {
+                                $(this).remove();
+                                return false;
+                            }
+                        });   
+                    break;    
+                    
+                    case "gamerooms":
+                    //display rooms
+                        var rooms = message.rooms;
+                        for (var i = 0; i < rooms.length; i++) {
+                            var room = rooms[i];
+                            listOneRoom(room, socket, username);
+                        }
+                  
+                    break;
+                  
+                    case "roomCreate":
+                        if (message.status==="rnt") {
+                        //room name taken
+                            alert("this room name is taken");
+                     
+                        } else {
+                        //everything ok, place me in this room
+                             $("#rooms, #online, #status").css("display", "none");
+                             $("#myRoom").css("display", "block");
+                             $("#myRoomTitle").append(message.roomInfo.roomName);      
+                             $("#myRoomPlayers").append(message.roomInfo.roomOwner+" (owner)<br>");        
+                        }       
+                    
+                    break;
+                 
+                    case "newRoom":
+                    //new room created
+                        listOneRoom(message.roomInfo, socket, username);
+                 
+                    break;
+                 
+                    case "myRoom":
+                    //i'm in this room
+                        $("#rooms, #online, #status").css("display", "none");
+                        $("#myRoom").css("display", "block");
+                        $("#myRoomTitle").append(message.roomName);
+                        var players = message.players;
+                        for (var i = 0; i < players.length; i++) {
+                            if (players[i] === message.roomOwner) {
+                                $("#myRoomPlayers").append(players[i]+" (owner)<br>");
+                            } else {
+                                $("#myRoomPlayers").append(players[i]+"<br>");
+                            }
+                        }
+                 
+                    break;
+                 
+                    case "joinRoom":
+                        if (message.status === "+") {
+                         //room joined, display info                            
+                            $("#rooms, #online, #status").css("display", "none");
+                            $("#myRoom").css("display", "block");
+                            $("#myRoomTitle").append(message.roomName);
+                            var players = message.players;
+                            for (var i = 0; i < players.length; i++) {
+                                if (players[i] === message.roomOwner) {
+                                    $("#myRoomPlayers").append(players[i]+" (owner)<br>");
+                                } else {
+                                    $("#myRoomPlayers").append(players[i]+"<br>");
+                                }
+                            }
+                        } else if (message.status === "-") {
+                         //room doesn't exist
+                            alert ("a room with this name doesn't exist");                         
+                        } else {
+                         //wrong password
+                            alert("the password entered is incorrect");
+                         
+                         
+                        }                   
+                     
+                 
+                 
+                    break;
+                    
+                    case "newPlayer":
+                    //new player in room
+                        $("#myRoomPlayers").append(message.username+"<br>");                    
+                    
+                    break;
+                  
+                
+                
+                }
+            };
+            
+            
+            socket.onerror = function(event) {
+            
+            
+            };
+            
+            socket.onclose = function(event) {
+            
+            };
+            
+        }
+        else {
+            alert("please enable local storage or change to a browser with local storage");
+        }
+        
+        
+    }());
   </script>
 
 

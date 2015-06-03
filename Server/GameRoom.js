@@ -11,4 +11,22 @@ module.exports = function GameRoom (roomName, roomOwner, roomType, roomPass) {
     }
     this.players = [];
     this.players.push(roomOwner);
+    
+    /*
+    this.infoWithPass = function() {
+    var info = {};
+    info.roomName = roomName;
+    info.roomType = roomType;
+    info.roomPass = roomPass;
+    info.roomOwner = roomOwner;
+    info.players = players;
+    return info;    
+    }
+    
+    function infoWithoutPass {
+    
+    
+    }
+    */
+    
 }
